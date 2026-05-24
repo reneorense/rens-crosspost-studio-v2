@@ -479,7 +479,6 @@ export default function App() {
                 <Sliders className="w-4.5 h-4.5" />
                 <span>Dashboard</span>
               </div>
-              <span className="text-xs font-mono bg-[#162136] px-2 py-0.5 rounded text-slate-300">{accounts.length}</span>
             </button>
 
             <button
@@ -527,7 +526,6 @@ export default function App() {
                 <Calendar className="w-4.5 h-4.5" />
                 <span>Schedule Queue</span>
               </div>
-              <span className="text-xs font-mono bg-[#162136] px-2 py-0.5 rounded text-slate-300">{activeSchedules.length}</span>
             </button>
 
             <button
@@ -542,9 +540,6 @@ export default function App() {
                 <History className="w-4.5 h-4.5" />
                 <span>Post History</span>
               </div>
-              <span className="text-xs font-mono bg-[#162136] px-2 py-0.5 rounded text-slate-300">
-                {posts.filter(p => p.status === 'posted' || p.status === 'failed').length}
-              </span>
             </button>
 
             <button
@@ -559,7 +554,6 @@ export default function App() {
                 <ImageIcon className="w-4.5 h-4.5" />
                 <span>Media Assets</span>
               </div>
-              <span className="text-xs font-mono bg-[#162136] px-2 py-0.5 rounded text-slate-300">{mediaAssets.length}</span>
             </button>
 
             <div className="h-px bg-slate-800/80 my-3"></div>
@@ -649,8 +643,8 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Social Channels</span>
                         <LinkIcon className="w-4 h-4 text-emerald-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">{accounts.length}</p>
-                      <p className="text-[10px] text-slate-400 mt-1">{accounts.filter(a => a.status === 'active').length} active tokens</p>
+                      <p className="text-2xl font-bold font-mono text-white">0</p>
+                      <p className="text-[10px] text-slate-400 mt-1">No connected accounts</p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -658,10 +652,8 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Live Posts</span>
                         <TrendingUp className="w-4 h-4 text-indigo-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">
-                        {posts.filter(p => p.status === 'posted').length}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-1">Multiplied to targets</p>
+                      <p className="text-2xl font-bold font-mono text-white">0</p>
+                      <p className="text-[10px] text-slate-400 mt-1">No published posts</p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -669,10 +661,8 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Scheduled Queue</span>
                         <Clock className="w-4 h-4 text-amber-500" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">
-                        {activeSchedules.length}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-1">Due for automated release</p>
+                      <p className="text-2xl font-bold font-mono text-white">0</p>
+                      <p className="text-[10px] text-slate-400 mt-1">No scheduled posts</p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -680,10 +670,8 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Storage Files</span>
                         <ImageIcon className="w-4 h-4 text-teal-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">{mediaAssets.length}</p>
-                      <p className="text-[10px] text-slate-400 mt-1">
-                        {(mediaAssets.reduce((s, a) => s + a.file_size, 0) / (1024 * 1024)).toFixed(2)} MB total
-                      </p>
+                      <p className="text-2xl font-bold font-mono text-white">0</p>
+                      <p className="text-[10px] text-slate-400 mt-1">No uploaded files</p>
                     </div>
                   </div>
 
@@ -707,7 +695,7 @@ export default function App() {
                         <WifiOff className="w-10 h-10 text-slate-500 mx-auto mb-3" />
                         <h4 className="font-semibold text-slate-300">No real social accounts connected yet.</h4>
                         <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2">
-                          Standard API configurations can be managed under credentials to authorize channels.
+                          Connect your developer credentials in Phase 2 to start linking accounts.
                         </p>
                       </div>
                     ) : (
@@ -1238,9 +1226,9 @@ export default function App() {
                     {scheduledPosts.length === 0 ? (
                       <div className="text-center py-12">
                         <Calendar className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-300">No releases scheduled</h4>
+                        <h4 className="font-semibold text-slate-300">No scheduled posts yet.</h4>
                         <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                          You do not have any pending posts setup for database cron check. Create a post and select a publish date.
+                          Create a post and select a publish date to schedule it for future release.
                         </p>
                       </div>
                     ) : (
@@ -1329,9 +1317,9 @@ export default function App() {
                     {posts.filter(p => p.status !== 'scheduled').length === 0 ? (
                       <div className="text-center py-12">
                         <History className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-300">History Empty</h4>
+                        <h4 className="font-semibold text-slate-300">No real posts published yet.</h4>
                         <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                          You do not have any published or failed post items yet. Try creating a post.
+                          Your historical post publications report here when connected via real channels.
                         </p>
                       </div>
                     ) : (
@@ -1546,9 +1534,9 @@ export default function App() {
                     {mediaAssets.length === 0 ? (
                       <div className="text-center py-16">
                         <ImageIcon className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-300">File Storage Bin is Empty</h4>
+                        <h4 className="font-semibold text-slate-300">No uploaded media yet.</h4>
                         <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1 mb-4">
-                          Upload high fidelity images or MP4 recordings to construct targeted post previews.
+                          Upload high fidelity images or MP4 recordings to construct targeted social posts in Phase 2.
                         </p>
                       </div>
                     ) : (
