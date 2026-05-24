@@ -36,214 +36,13 @@ import {
 } from 'lucide-react';
 import { ConnectedAccount, Post, PostTarget, ScheduledPost, MediaAsset, PostLog, PlatformConfig } from './types';
 
-const INITIAL_ACCOUNTS: ConnectedAccount[] = [
-  {
-    id: 'demo_fb_1',
-    user_id: 'u1',
-    platform: 'facebook',
-    platform_account_id: 'fb_123',
-    display_name: 'Studio Tech Page (Demo)',
-    avatar_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-    status: 'active',
-    access_token_reference: '',
-    refresh_token_reference: '',
-    token_expires_at: '',
-    posts_count: 14,
-    last_post_date: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'demo_ig_1',
-    user_id: 'u1',
-    platform: 'instagram',
-    platform_account_id: 'ig_123',
-    display_name: 'Aesthetic Design (Demo)',
-    avatar_url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=150',
-    status: 'active',
-    access_token_reference: '',
-    refresh_token_reference: '',
-    token_expires_at: '',
-    posts_count: 28,
-    last_post_date: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 45 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'demo_x_1',
-    user_id: 'u1',
-    platform: 'x',
-    platform_account_id: 'x_123',
-    display_name: 'UI/UX CrossPost (Demo)',
-    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-    status: 'active',
-    access_token_reference: '',
-    refresh_token_reference: '',
-    token_expires_at: '',
-    posts_count: 5,
-    last_post_date: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'demo_yt_1',
-    user_id: 'u1',
-    platform: 'youtube',
-    platform_account_id: 'yt_123',
-    display_name: 'Indie Studio (Demo)',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    status: 'expired',
-    access_token_reference: '',
-    refresh_token_reference: '',
-    token_expires_at: '',
-    posts_count: 2,
-    last_post_date: new Date(Date.now() - 12 * 24 * 3600 * 1000).toISOString(),
-    created_at: new Date(Date.now() - 20 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 12 * 24 * 365 * 1000).toISOString()
-  }
-];
+const INITIAL_ACCOUNTS: ConnectedAccount[] = [];
 
-const INITIAL_POSTS: (Post & { targets: PostTarget[]; schedule?: ScheduledPost })[] = [
-  {
-    id: 'demo_post_1',
-    user_id: 'u1',
-    title: 'Aesthetic Interface Reveal',
-    caption: 'Behold the newly crafted responsive dashboard layout for REN\'s CrossPost Studio! Directly deploy and synchronize content schedules cross-network. #BuildInPublic 🚀',
-    media_asset_ids: ['demo_media_1'],
-    status: 'posted',
-    created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString(),
-    targets: [
-      {
-        id: 'demo_tgt_1_fb',
-        post_id: 'demo_post_1',
-        platform: 'facebook',
-        connected_account_id: 'demo_fb_1',
-        platform_post_id: 'fb_post_99182',
-        platform_post_url: 'https://facebook.com',
-        status: 'success',
-        error_message: null,
-        posted_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-      },
-      {
-        id: 'demo_tgt_1_ig',
-        post_id: 'demo_post_1',
-        platform: 'instagram',
-        connected_account_id: 'demo_ig_1',
-        platform_post_id: 'ig_post_88319',
-        platform_post_url: 'https://instagram.com',
-        status: 'success',
-        error_message: null,
-        posted_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-      }
-    ]
-  },
-  {
-    id: 'demo_post_2',
-    user_id: 'u1',
-    title: 'Short Cinematic Mood Teaser',
-    caption: 'Working on cinematic color grading assets for our YouTube channels. Super excited for this release next month.',
-    media_asset_ids: ['demo_media_2'],
-    status: 'failed',
-    created_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString(),
-    targets: [
-      {
-        id: 'demo_tgt_2_fb',
-        post_id: 'demo_post_2',
-        platform: 'facebook',
-        connected_account_id: 'demo_fb_1',
-        platform_post_id: null,
-        platform_post_url: null,
-        status: 'failed',
-        error_message: 'OAuth refresh validation failed. Please reconnect the Facebook Channel integration in setting tab.',
-        posted_at: null
-      }
-    ]
-  },
-  {
-    id: 'demo_post_3',
-    user_id: 'u1',
-    title: 'Sunday Morning Newsletter Snippet',
-    caption: 'Sharing some wisdom from our latest blog entry on automated marketing and multi-channel operations. Subscriptions are open! 💌',
-    media_asset_ids: [],
-    status: 'scheduled',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    targets: [],
-    schedule: {
-      id: 'demo_sched_1',
-      post_id: 'demo_post_3',
-      scheduled_at: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().split('T')[0] + 'T10:00:00.000Z',
-      timezone: 'UTC',
-      status: 'scheduled',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  }
-];
+const INITIAL_POSTS: (Post & { targets: PostTarget[]; schedule?: ScheduledPost })[] = [];
 
-const INITIAL_MEDIA_ASSETS: MediaAsset[] = [
-  {
-    id: 'demo_media_1',
-    user_id: 'u1',
-    file_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600',
-    file_type: 'image',
-    file_name: 'interface_mockup_design.png',
-    file_size: 1024 * 120,
-    mime_type: 'image/png',
-    created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'demo_media_2',
-    user_id: 'u1',
-    file_url: 'https://assets.mixkit.co/videos/preview/mixkit-cinematic-mountain-landscape-under-dark-clouds-42220-large.mp4',
-    file_type: 'video',
-    file_name: 'mountain_teaser_reel.mp4',
-    file_size: 1024 * 1024 * 8.5,
-    mime_type: 'video/mp4',
-    created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-  }
-];
+const INITIAL_MEDIA_ASSETS: MediaAsset[] = [];
 
-const INITIAL_POST_LOGS: PostLog[] = [
-  {
-    id: 'demo_log_1',
-    post_id: 'demo_post_1',
-    platform: 'facebook',
-    action: 'publish_post',
-    status: 'success',
-    message: 'Post successfully published to Facebook Page "Studio Tech Page (Demo)"! Post ID: fb_post_99182',
-    created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString()
-  },
-  {
-    id: 'demo_log_2',
-    post_id: 'demo_post_1',
-    platform: 'instagram',
-    action: 'publish_post',
-    status: 'success',
-    message: 'Post successfully published to Instagram Creator "Aesthetic Design (Demo)"! Post ID: ig_post_88319',
-    created_at: new Date(Date.now() - 1 * 24 * 3600 * 1000 + 100).toISOString()
-  },
-  {
-    id: 'demo_log_3',
-    post_id: 'demo_post_2',
-    platform: 'facebook',
-    action: 'publish_post',
-    status: 'failed',
-    message: 'Failed to publish to Facebook: OAuth token has expired and could not be requested silently.',
-    created_at: new Date(Date.now() - 2 * 24 * 3605 * 1000).toISOString()
-  },
-  {
-    id: 'demo_log_4',
-    post_id: '',
-    platform: 'all',
-    action: 'system_init',
-    status: 'success',
-    message: 'REN\'s CrossPost Studio backend successfully initialized. Phase 1 static workspace loaded beautifully.',
-    created_at: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString()
-  }
-];
+const INITIAL_POST_LOGS: PostLog[] = [];
 
 export default function App() {
   // Navigation active tab
@@ -251,19 +50,19 @@ export default function App() {
 
   // Core records initialized with client-side localStorage/mock fallback
   const [accounts, setAccounts] = useState<ConnectedAccount[]>(() => {
-    const cached = localStorage.getItem('crosspost_accounts');
+    const cached = localStorage.getItem('crosspost_accounts_v2');
     return cached ? JSON.parse(cached) : INITIAL_ACCOUNTS;
   });
   const [posts, setPosts] = useState<(Post & { targets: PostTarget[]; schedule?: ScheduledPost })[]>(() => {
-    const cached = localStorage.getItem('crosspost_posts');
+    const cached = localStorage.getItem('crosspost_posts_v2');
     return cached ? JSON.parse(cached) : INITIAL_POSTS;
   });
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>(() => {
-    const cached = localStorage.getItem('crosspost_media_assets');
+    const cached = localStorage.getItem('crosspost_media_assets_v2');
     return cached ? JSON.parse(cached) : INITIAL_MEDIA_ASSETS;
   });
   const [logs, setLogs] = useState<PostLog[]>(() => {
-    const cached = localStorage.getItem('crosspost_logs');
+    const cached = localStorage.getItem('crosspost_logs_v2');
     return cached ? JSON.parse(cached) : INITIAL_POST_LOGS;
   });
   
@@ -344,19 +143,19 @@ export default function App() {
 
   // Persist states to localStorage for premium high-fidelity local interactions
   useEffect(() => {
-    localStorage.setItem('crosspost_accounts', JSON.stringify(accounts));
+    localStorage.setItem('crosspost_accounts_v2', JSON.stringify(accounts));
   }, [accounts]);
 
   useEffect(() => {
-    localStorage.setItem('crosspost_posts', JSON.stringify(posts));
+    localStorage.setItem('crosspost_posts_v2', JSON.stringify(posts));
   }, [posts]);
 
   useEffect(() => {
-    localStorage.setItem('crosspost_media_assets', JSON.stringify(mediaAssets));
+    localStorage.setItem('crosspost_media_assets_v2', JSON.stringify(mediaAssets));
   }, [mediaAssets]);
 
   useEffect(() => {
-    localStorage.setItem('crosspost_logs', JSON.stringify(logs));
+    localStorage.setItem('crosspost_logs_v2', JSON.stringify(logs));
   }, [logs]);
 
   // Popup / Message listener for instant, beautiful OAuth feedback
@@ -501,11 +300,11 @@ export default function App() {
       return;
     }
 
-    showToast('error', 'Backend and Supabase setup required before real posting is available.');
+    showToast('error', 'Backend, Supabase, and OAuth setup required before real posting is available.');
   };
 
   const handleRetryPost = async (postId: string) => {
-    showToast('error', 'Backend and Supabase setup required before real posting is available.');
+    showToast('error', 'Backend, Supabase, and OAuth setup required before real posting is available.');
   };
 
   const handleCancelScheduled = async (schedId: string) => {
@@ -644,12 +443,20 @@ export default function App() {
             </button>
             <div className="h-6 w-px bg-slate-800"></div>
             <div className="flex items-center gap-2 bg-[#101424] px-3.5 py-1.5 rounded-xl border border-slate-800">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-xs font-mono text-slate-300">Local DB Active</span>
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+              <span className="text-xs font-mono text-slate-300">Demo UI Mode</span>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Notice bar near the top */}
+      <div className="bg-[#1e150a] border-b border-amber-500/20 text-amber-500 py-2.5 px-4 text-center text-xs font-semibold">
+        <span className="inline-flex items-center gap-1.5 justify-center">
+          <Info className="w-4 h-4 text-amber-500" />
+          Real OAuth, Supabase storage, and posting APIs will be added in Phase 2.
+        </span>
+      </div>
 
       {/* Main Layout Container */}
       <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
@@ -777,13 +584,13 @@ export default function App() {
             <h4 className="text-xs font-bold tracking-wider uppercase text-slate-400">Total Activity</h4>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400">Published via app</span>
-              <span className="font-mono text-sm font-semibold text-white">{accounts.reduce((sum, acc) => sum + (acc.posts_count || 0), 0)}</span>
+              <span className="font-mono text-sm font-semibold text-white">0</span>
             </div>
             <div className="w-full bg-[#162136] rounded-full h-1">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1 rounded-full" style={{ width: '70%' }}></div>
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1 rounded-full" style={{ width: '0%' }}></div>
             </div>
             <span className="text-[10px] text-slate-500 leading-relaxed leading-normal">
-              Direct connection calls bypass middlemen to secure write scopes.
+              Standard real-time APIs deliver publishing results directly.
             </span>
           </div>
         </aside>
@@ -898,16 +705,10 @@ export default function App() {
                     {accounts.length === 0 ? (
                       <div className="bg-[#091020] border-2 border-dashed border-[#1e293b] p-8 text-center rounded-2xl">
                         <WifiOff className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-                        <h4 className="font-semibold text-slate-300">No Channels Linked</h4>
-                        <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1 mb-4">
-                          Establish direct link configurations via environment keys or connect official profiles instantly.
+                        <h4 className="font-semibold text-slate-300">No real social accounts connected yet.</h4>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2">
+                          Standard API configurations can be managed under credentials to authorize channels.
                         </p>
-                        <button
-                          onClick={() => setActiveTab('connect')}
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl"
-                        >
-                          Show Connect Page
-                        </button>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1040,68 +841,46 @@ export default function App() {
                                 <h3 className="font-bold text-slate-100">{platform.name}</h3>
                               </div>
 
-                              <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${
-                                platform.isConfigured 
-                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                                  : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
-                              }`}>
-                                {platform.isConfigured ? 'READY FOR OAUTH' : 'API SETUP REQUIRED'}
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                API SETUP REQUIRED
                               </span>
                             </div>
 
                             <div className="mt-4 space-y-2">
-                              <p className="text-xs text-slate-400 leading-relaxed leading-relaxed">
+                              <p className="text-xs text-slate-400 leading-relaxed">
                                 Connect credentials to start directly posting. Media types supported: 
-                                <span className="text-slate-300 font-semibold font-medium"> {platform.id === 'youtube' ? 'Videos, YouTube Shorts' : 'Images, Videos, text-only posts'}.</span>
+                                <span className="text-slate-300 font-medium"> {platform.id === 'youtube' ? 'Videos, YouTube Shorts' : 'Images, Videos, text-only posts'}.</span>
                               </p>
 
                               {/* Keys detail listing */}
-                              <div className="bg-[#050811] p-3 rounded-lg border border-slate-900 mt-2">
+                              <div className="bg-[#050811] p-3 rounded-lg border border-slate-900 mt-2 space-y-1.5">
                                 <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500 mb-1">OAuth ENV Checks</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {platform.envVars.map(v => {
-                                    const isOk = !platform.missingVars?.includes(v);
-                                    return (
-                                      <span key={v} className={`text-[9px] font-mono px-1.5 py-0.5 rounded ${
-                                        isOk ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800/30' : 'bg-rose-900/40 text-rose-300 border border-rose-800/30'
-                                      }`}>
-                                        {isOk ? '✓' : '✗'} {v.replace(`${platform.id.toUpperCase()}_`, '')}
-                                      </span>
-                                    );
-                                  })}
+                                <div className="flex flex-col gap-1 text-xs">
+                                  <span className="text-amber-500 font-medium flex items-center gap-1.5">
+                                    <span>✗</span> API setup required
+                                  </span>
+                                  <span className="text-rose-400/90 font-mono text-[11px] flex items-center gap-1.5">
+                                    <span>✗</span> Missing client ID
+                                  </span>
+                                  <span className="text-rose-400/90 font-mono text-[11px] flex items-center gap-1.5">
+                                    <span>✗</span> Missing client secret
+                                  </span>
+                                  <span className="text-slate-400/90 font-mono text-[11px] flex items-center gap-1.5">
+                                    <span>✗</span> OAuth not connected
+                                  </span>
                                 </div>
                               </div>
                             </div>
                           </div>
 
                           <div className="mt-5 pt-3.5 border-t border-slate-800/85">
-                            {linkedProfiles.length > 0 && (
-                              <div className="mb-3">
-                                <p className="text-[9px] uppercase font-bold tracking-wider text-slate-500 mb-1">Currently Coupled Profiles</p>
-                                <div className="space-y-1">
-                                  {linkedProfiles.map(p => (
-                                    <div key={p.id} className="flex items-center justify-between bg-slate-900/50 p-1.5 rounded text-xs text-slate-350">
-                                      <span className="truncate">{p.display_name}</span>
-                                      <span className="text-[9px] text-emerald-400 font-mono">Status OK</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
                             <div className="flex gap-2">
-                              {platform.isConfigured ? (
-                                <button
-                                  onClick={() => handleInitiateOAuth(platform.id)}
-                                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-2 rounded-xl transition shadow cursor-pointer text-center"
-                                >
-                                  Connect with OAuth
-                                </button>
-                              ) : (
-                                <div className="flex-1 bg-[#1a120c] border border-amber-500/25 text-amber-500/90 p-2.5 rounded-xl text-center text-[10px] font-mono font-bold uppercase tracking-wider">
-                                  API setup required
-                                </div>
-                              )}
+                              <button
+                                onClick={() => setActiveTab('settings')}
+                                className="flex-1 bg-[#1a1c2e] hover:bg-[#252842] border border-indigo-500/30 text-indigo-300 text-xs font-semibold py-2.5 rounded-xl transition shadow cursor-pointer text-center"
+                              >
+                                Set up API credentials
+                              </button>
                             </div>
                           </div>
 
@@ -1121,6 +900,17 @@ export default function App() {
                   <div className="border-b border-slate-800/80 pb-4 mb-6">
                     <h2 className="text-xl font-bold text-white">Social Campaign Publisher</h2>
                     <p className="text-xs text-slate-400 mt-1">Cross-post content and media directly through official APIs.</p>
+                  </div>
+
+                  {/* Explicit Setup Notice */}
+                  <div className="bg-[#1e110c] border border-amber-600/20 text-amber-500 rounded-2xl p-4 flex items-start gap-3 mb-6">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-amber-400">Offline Development Notice</h4>
+                      <p className="text-xs text-amber-600/90 mt-1 leading-relaxed">
+                        Backend, Supabase, and OAuth setup required before real posting is available.
+                      </p>
+                    </div>
                   </div>
 
                   <form onSubmit={handleCreatePostSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -1428,6 +1218,17 @@ export default function App() {
                     >
                       <Plus className="w-4.5 h-4.5" /> Schedule New
                     </button>
+                  </div>
+
+                  {/* Explicit Setup Notice */}
+                  <div className="bg-[#1e110c] border border-amber-600/20 text-amber-500 rounded-2xl p-4 flex items-start gap-3">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-bold text-amber-400">Offline Development Notice</h4>
+                      <p className="text-xs text-amber-600/90 mt-1 leading-relaxed">
+                        Backend, Supabase, and OAuth setup required before real posting is available.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Schedules filter lists */}
