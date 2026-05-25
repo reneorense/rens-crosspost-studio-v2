@@ -35,6 +35,8 @@ import {
   Activity
 } from 'lucide-react';
 import { ConnectedAccount, Post, PostTarget, ScheduledPost, MediaAsset, PostLog, PlatformConfig } from './types';
+import { fetchBackend } from './lib/api';
+import { supabase } from './lib/supabaseClient';
 
 const INITIAL_ACCOUNTS: ConnectedAccount[] = [];
 
@@ -48,23 +50,11 @@ export default function App() {
   // Navigation active tab
   const [activeTab, setActiveTab] = useState<'dashboard' | 'connect' | 'create' | 'schedule' | 'history' | 'media' | 'settings' | 'guide'>('dashboard');
 
-  // Core records initialized with client-side localStorage/mock fallback
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>(() => {
-    const cached = localStorage.getItem('crosspost_accounts_v2');
-    return cached ? JSON.parse(cached) : INITIAL_ACCOUNTS;
-  });
-  const [posts, setPosts] = useState<(Post & { targets: PostTarget[]; schedule?: ScheduledPost })[]>(() => {
-    const cached = localStorage.getItem('crosspost_posts_v2');
-    return cached ? JSON.parse(cached) : INITIAL_POSTS;
-  });
-  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>(() => {
-    const cached = localStorage.getItem('crosspost_media_assets_v2');
-    return cached ? JSON.parse(cached) : INITIAL_MEDIA_ASSETS;
-  });
-  const [logs, setLogs] = useState<PostLog[]>(() => {
-    const cached = localStorage.getItem('crosspost_logs_v2');
-    return cached ? JSON.parse(cached) : INITIAL_POST_LOGS;
-  });
+  // Core records initialized with live database records
+  const [accounts, setAccounts] = useState<ConnectedAccount[]>(INITIAL_ACCOUNTS);
+  const [posts, setPosts] = useState<(Post & { targets: PostTarget[]; schedule?: ScheduledPost })[]>(INITIAL_POSTS);
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>(INITIAL_MEDIA_ASSETS);
+  const [logs, setLogs] = useState<PostLog[]>(INITIAL_POST_LOGS);
   
   const [configs, setConfigs] = useState<{ id: string; name: string; envVars: string[]; isConfigured: boolean; missingVars: string[] }[]>([
     {
@@ -141,23 +131,6 @@ export default function App() {
   const [overrideCaption, setOverrideCaption] = useState<Record<string, string>>({}); // { accountId: 'caption' }
   const [privacySetting, setPrivacySetting] = useState<'PUBLIC' | 'FRIENDS' | 'PRIVATE'>('PUBLIC');
 
-  // Persist states to localStorage for premium high-fidelity local interactions
-  useEffect(() => {
-    localStorage.setItem('crosspost_accounts_v2', JSON.stringify(accounts));
-  }, [accounts]);
-
-  useEffect(() => {
-    localStorage.setItem('crosspost_posts_v2', JSON.stringify(posts));
-  }, [posts]);
-
-  useEffect(() => {
-    localStorage.setItem('crosspost_media_assets_v2', JSON.stringify(mediaAssets));
-  }, [mediaAssets]);
-
-  useEffect(() => {
-    localStorage.setItem('crosspost_logs_v2', JSON.stringify(logs));
-  }, [logs]);
-
   // Popup / Message listener for instant, beautiful OAuth feedback
   useEffect(() => {
     const handleOauthMessage = (event: MessageEvent) => {
@@ -201,17 +174,27 @@ export default function App() {
   const fetchCoreData = async () => {
     try {
       setLoading(true);
-      const cachedAcc = localStorage.getItem('crosspost_accounts');
-      const cachedPosts = localStorage.getItem('crosspost_posts');
-      const cachedMedia = localStorage.getItem('crosspost_media_assets');
-      const cachedLogs = localStorage.getItem('crosspost_logs');
+      const [accRes, postsRes, mediaRes, logsRes] = await Promise.all([
+        fetchBackend('getConnectedAccounts').catch(() => ({ success: true, data: [] })),
+        fetchBackend('getPosts').catch(() => ({ success: true, data: [] })),
+        fetchBackend('getMediaAssets').catch(() => ({ success: true, data: [] })),
+        fetchBackend('getLogs').catch(() => ({ success: true, data: [] }))
+      ]);
 
-      if (cachedAcc) setAccounts(JSON.parse(cachedAcc));
-      if (cachedPosts) setPosts(JSON.parse(cachedPosts));
-      if (cachedMedia) setMediaAssets(JSON.parse(cachedMedia));
-      if (cachedLogs) setLogs(JSON.parse(cachedLogs));
+      if (accRes && accRes.success) {
+        setAccounts(accRes.data || []);
+      }
+      if (postsRes && postsRes.success) {
+        setPosts(postsRes.data || []);
+      }
+      if (mediaRes && mediaRes.success) {
+        setMediaAssets(mediaRes.data || []);
+      }
+      if (logsRes && logsRes.success) {
+        setLogs(logsRes.data || []);
+      }
     } catch (err) {
-      console.error('Failed to sync local metadata:', err);
+      console.error('Failed to sync metadata from Supabase database:', err);
     } finally {
       setLoading(false);
     }
@@ -241,51 +224,68 @@ export default function App() {
     if (!file) return;
 
     setUploading(true);
-    showToast('info', `Reading "${file.name}" locally...`);
+    showToast('info', `Uploading "${file.name}" to Supabase storage...`);
 
     try {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64Url = event.target?.result as string;
-        if (!base64Url) {
-          showToast('error', 'Could not process file.');
-          setUploading(false);
-          return;
-        }
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+      const filePath = `uploads/${fileName}`;
 
-        const newAsset: MediaAsset = {
-          id: `media_${Date.now()}`,
-          user_id: 'u1',
-          file_url: base64Url,
-          file_type: file.type.startsWith('video') ? 'video' : 'image',
-          file_name: file.name,
-          file_size: file.size,
-          mime_type: file.type,
-          created_at: new Date().toISOString()
-        };
+      const bucketName = 'media';
 
-        setMediaAssets(prev => [newAsset, ...prev]);
-        showToast('success', `File "${file.name}" successfully uploaded offline!`);
-        setUploading(false);
-      };
-      
-      reader.onerror = () => {
-        showToast('error', 'Local reader stream failed.');
-        setUploading(false);
-      };
+      // Upload to Supabase Storage bucket 'media'
+      const { data, error: uploadErr } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
 
-      reader.readAsDataURL(file);
+      if (uploadErr) {
+        throw new Error(uploadErr.message || 'Supabase storage exception occurred. Please ensure the public bucket name "media" is created in your database.');
+      }
+
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(filePath);
+
+      const fileUrl = urlData?.publicUrl || '';
+      const newAssetId = `media_${Date.now()}`;
+
+      // Save metadata to media_assets table
+      await fetchBackend('createMediaUploadRecord', {
+        id: newAssetId,
+        file_url: fileUrl,
+        file_type: file.type.startsWith('video') ? 'video' : 'image',
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type
+      });
+
+      showToast('success', `File "${file.name}" uploaded to Supabase Storage!`);
+      fetchCoreData();
     } catch (err: any) {
-      console.error('Local direct upload exception:', err);
-      showToast('error', `Media upload error: ${err.message}`);
+      console.error('Core storage upload exception:', err);
+      showToast('error', `Media upload failed: ${err.message || 'Make sure "media" bucket is created and set public.'}`);
+    } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   const handleDeleteMedia = async (mediaId: string) => {
-    setMediaAssets(prev => prev.filter(m => m.id !== mediaId));
-    setSelectedMediaIds(prev => prev.filter(id => id !== mediaId));
-    showToast('success', 'Media asset removed.');
+    if (!confirm('Are you sure you want to delete this media asset?')) return;
+    try {
+      const { error } = await supabase.from('media_assets').delete().eq('id', mediaId);
+      if (error) throw error;
+      setSelectedMediaIds(prev => prev.filter(id => id !== mediaId));
+      showToast('success', 'Media asset removed from Supabase DB.');
+      fetchCoreData();
+    } catch (err: any) {
+      showToast('error', `Deletion failed: ${err.message}`);
+    }
   };
 
   // Create Post Publication Workflow
@@ -300,29 +300,58 @@ export default function App() {
       return;
     }
 
-    showToast('error', 'Backend, Supabase, and OAuth setup required before real posting is available.');
+    try {
+      setSubmitLoading(true);
+      const isScheduled = !!(scheduleDate && scheduleTime);
+      const status = isScheduled ? 'scheduled' : 'draft';
+      const scheduledAt = isScheduled ? `${scheduleDate}T${scheduleTime}:00` : undefined;
+
+      const newPostId = `post_${Date.now()}`;
+
+      await fetchBackend('createPostDraft', {
+        id: newPostId,
+        title: postTitle || 'Untitled Post',
+        caption: postCaption,
+        media_asset_ids: selectedMediaIds,
+        status,
+        scheduled_at: scheduledAt,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      });
+
+      showToast('success', 'Draft saved locally to Supabase. Real publishing will be added in Phase 2B.');
+      
+      // Clear values
+      setPostTitle('');
+      setPostCaption('');
+      setSelectedMediaIds([]);
+      setScheduleDate('');
+      setScheduleTime('');
+      setOverrideCaption({});
+
+      fetchCoreData();
+      setActiveTab(isScheduled ? 'schedule' : 'history');
+    } catch (err: any) {
+      console.error('Failed to save post draft:', err);
+      showToast('error', `Failed to save post draft: ${err.message}`);
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const handleRetryPost = async (postId: string) => {
-    showToast('error', 'Backend, Supabase, and OAuth setup required before real posting is available.');
+    showToast('error', 'Real publishing will be added in Phase 2B.');
   };
 
   const handleCancelScheduled = async (schedId: string) => {
     if (!confirm('Are you sure you want to cancel this scheduled publishing release?')) return;
-    setPosts(prev => prev.map(p => {
-      if (p.schedule && p.schedule.id === schedId) {
-        return {
-          ...p,
-          status: 'draft',
-          schedule: {
-            ...p.schedule,
-            status: 'canceled'
-          }
-        };
-      }
-      return p;
-    }));
-    showToast('success', 'Schedule publishing canceled.');
+    try {
+      const { error } = await supabase.from('scheduled_posts').delete().eq('id', schedId);
+      if (error) throw error;
+      showToast('success', 'Schedule publishing canceled.');
+      fetchCoreData();
+    } catch (err: any) {
+      showToast('error', `Cancellation failed: ${err.message}`);
+    }
   };
 
   const handleDuplicatePost = (post: Post) => {
@@ -335,8 +364,14 @@ export default function App() {
 
   const handleDeletePostRecord = async (postId: string) => {
     if (!confirm('Delete this post history record? This will remove log records from this dashboard.')) return;
-    setPosts(prev => prev.filter(p => p.id !== postId));
-    showToast('success', 'Post history record removed.');
+    try {
+      const { error } = await supabase.from('posts').delete().eq('id', postId);
+      if (error) throw error;
+      showToast('success', 'Post history record removed.');
+      fetchCoreData();
+    } catch (err: any) {
+      showToast('error', `Deletion failed: ${err.message}`);
+    }
   };
 
   // Helpers
@@ -643,8 +678,10 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Social Channels</span>
                         <LinkIcon className="w-4 h-4 text-emerald-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">0</p>
-                      <p className="text-[10px] text-slate-400 mt-1">No connected accounts</p>
+                      <p className="text-2xl font-bold font-mono text-white">{accounts.length}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {accounts.length === 0 ? "No real social accounts connected yet" : `${accounts.length} profile${accounts.length === 1 ? '' : 's'} linked`}
+                      </p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -652,8 +689,12 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Live Posts</span>
                         <TrendingUp className="w-4 h-4 text-indigo-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">0</p>
-                      <p className="text-[10px] text-slate-400 mt-1">No published posts</p>
+                      <p className="text-2xl font-bold font-mono text-white">
+                        {posts.filter(p => p.status === 'posted').length}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {posts.filter(p => p.status === 'posted').length === 0 ? "No published posts yet" : `${posts.filter(p => p.status === 'posted').length} post${posts.filter(p => p.status === 'posted').length === 1 ? '' : 's'} published`}
+                      </p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -661,8 +702,12 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Scheduled Queue</span>
                         <Clock className="w-4 h-4 text-amber-500" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">0</p>
-                      <p className="text-[10px] text-slate-400 mt-1">No scheduled posts</p>
+                      <p className="text-2xl font-bold font-mono text-white">
+                        {posts.filter(p => p.status === 'scheduled').length}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {posts.filter(p => p.status === 'scheduled').length === 0 ? "No scheduled posts yet" : `${posts.filter(p => p.status === 'scheduled').length} queued release${posts.filter(p => p.status === 'scheduled').length === 1 ? '' : 's'}`}
+                      </p>
                     </div>
 
                     <div className="bg-[#091020] border border-[#111e35] p-5 rounded-2xl shadow-md">
@@ -670,8 +715,10 @@ export default function App() {
                         <span className="text-xs uppercase font-semibold tracking-wider">Storage Files</span>
                         <ImageIcon className="w-4 h-4 text-teal-400" />
                       </div>
-                      <p className="text-2xl font-bold font-mono text-white">0</p>
-                      <p className="text-[10px] text-slate-400 mt-1">No uploaded files</p>
+                      <p className="text-2xl font-bold font-mono text-white">{mediaAssets.length}</p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {mediaAssets.length === 0 ? "No uploaded media yet" : `${mediaAssets.length} asset${mediaAssets.length === 1 ? '' : 's'} registered`}
+                      </p>
                     </div>
                   </div>
 
@@ -684,28 +731,71 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="bg-[#091020] border-2 border-dashed border-[#1e293b] p-8 text-center rounded-2xl">
-                      <WifiOff className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-                      <h4 className="font-semibold text-slate-300">No real social accounts connected yet</h4>
-                      <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2 mb-5">
-                        Connect developer credentials in Phase 2 to link real accounts through official OAuth.
-                      </p>
-                      <button
-                        onClick={() => setActiveTab('guide')}
-                        className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer"
-                      >
-                        Set up API credentials
-                      </button>
-                    </div>
+                    {accounts.length === 0 ? (
+                      <div className="bg-[#091020] border-2 border-dashed border-[#1e293b] p-8 text-center rounded-2xl">
+                        <WifiOff className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                        <h4 className="font-semibold text-slate-300">No real social accounts connected yet</h4>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2 mb-5">
+                          Connect developer credentials in Phase 2 to link real accounts through official OAuth.
+                        </p>
+                        <button
+                          onClick={() => setActiveTab('guide')}
+                          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-5 py-2.5 rounded-xl transition cursor-pointer"
+                        >
+                          Set up API credentials
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {accounts.map(acc => (
+                          <div key={acc.id} className="bg-[#091020] border border-slate-800 p-4 rounded-xl flex items-center gap-3">
+                            <span className="bg-[#121c30] p-2 rounded-lg text-white">
+                              {getPlatformIcon(acc.platform)}
+                            </span>
+                            <div>
+                              <h4 className="font-bold text-xs text-white">{acc.name}</h4>
+                              <p className="text-[10px] text-slate-400 truncate max-w-[150px]">{acc.platform}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Activity Logs Console streaming */}
-                  <div className="bg-[#091020] border border-[#111e35] rounded-2xl p-8 text-center shadow-sm">
-                    <Activity className="w-10 h-10 text-slate-500 mx-auto mb-3" />
-                    <h4 className="font-semibold text-slate-300">No activity logs yet</h4>
-                    <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2">
-                       Real publishing logs will appear here after Phase 2 adds OAuth, Supabase, and posting APIs.
-                    </p>
+                  <div className="bg-[#091020] border border-[#111e35] rounded-2xl p-6 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Activity className="w-4.5 h-4.5 text-indigo-400 animate-pulse" />
+                      <h4 className="font-bold text-slate-200 text-xs uppercase tracking-wider">System Activity Logs</h4>
+                    </div>
+                    {logs.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Activity className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+                        <h4 className="font-semibold text-slate-300">No activity logs yet</h4>
+                        <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2">
+                          Real publishing logs will appear here after Phase 2 adds OAuth, Supabase, and posting APIs.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-[#050811] rounded-xl border border-slate-900 p-4 font-mono text-[11px] text-slate-300 max-h-60 overflow-y-auto space-y-2 text-left">
+                        {logs.map((log) => (
+                          <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-slate-950 pb-1.5 last:border-b-0 last:pb-0">
+                            <div className="flex items-center gap-2">
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                log.status === 'success' ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-900/40' :
+                                log.status === 'failed' ? 'bg-rose-950/80 text-rose-400 border border-rose-900/40' :
+                                'bg-slate-900 text-slate-400 border border-slate-800'
+                              }`}>
+                                {log.status.toUpperCase()}
+                              </span>
+                              <span className="text-slate-400 font-semibold">{log.platform.toUpperCase()}</span>
+                              <span className="text-slate-200 truncate max-w-[200px] sm:max-w-xs">{log.message}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500">{new Date(log.created_at).toLocaleString()}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                 </div>
@@ -1121,9 +1211,9 @@ export default function App() {
                   <div className="bg-[#1e110c] border border-amber-600/20 text-amber-500 rounded-2xl p-4 flex items-start gap-3">
                     <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-bold text-amber-400">Offline Development Notice</h4>
+                      <h4 className="font-bold text-amber-400">Automated Publishing</h4>
                       <p className="text-xs text-amber-600/90 mt-1 leading-relaxed">
-                        Backend, Supabase, and OAuth setup required before real posting is available.
+                        Automated publishing will be added after OAuth setup.
                       </p>
                     </div>
                   </div>
@@ -1648,6 +1738,21 @@ export default function App() {
                         <p>1. Open **Google Cloud Console** and provision a project with the **YouTube Data API v3** service enabled.</p>
                         <p>2. Register credentials as OAuth 2.0 Client IDs, configuring Authorize redirects: `YOUR_WORK_URL/api/oauth/callback/youtube`.</p>
                         <p>3. Required scopes check: `youtube.upload` in order to initiate multi-part file pipeline releases seamlessly.</p>
+                      </div>
+                    </div>
+
+                    {/* Supabase Stack Setup Card */}
+                    <div className="bg-gradient-to-br from-emerald-950/40 to-[#020d14] border border-emerald-900/40 p-5 rounded-2xl shadow-sm">
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <span className="bg-emerald-600 p-2 rounded-lg text-white font-mono text-xs font-bold">SB</span>
+                        <h3 className="font-bold text-white text-sm">Supabase Database & Storage Setup (Phase 2A)</h3>
+                      </div>
+                      <div className="text-xs text-slate-300 space-y-2 leading-relaxed">
+                        <p>1. **Create Supabase Project**: Open [Supabase Dashboard](https://supabase.com) and create a new project.</p>
+                        <p>2. **Initialize Schema**: Paste and run the entire SQL code in `supabase/schema.sql` inside the SQL Editor to provision all tables.</p>
+                        <p>3. **Establish Storage Bucket**: Create a bucket called `media` inside Database Storage. Set its privacy setting to **Public** so uploaded assets can be fetched publicly.</p>
+                        <p>4. **Register Vercel Environment Variables**: Populate the variables under the Project Settings panel: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_MEDIA_BUCKET` (value set to `media`).</p>
+                        <p>5. **Trigger Redeployment**: Redeploy the project on your Vercel Hobby account to take full advantage of real persistence!</p>
                       </div>
                     </div>
 

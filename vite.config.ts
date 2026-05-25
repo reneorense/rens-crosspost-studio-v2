@@ -5,7 +5,70 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(), 
+      tailwindcss(),
+      {
+        name: 'api-server-middleware',
+        configureServer(server) {
+          server.middlewares.use(async (req, res, next) => {
+            if (req.url?.startsWith('/api/server')) {
+              try {
+                const { default: handler } = await server.ssrLoadModule('./api/server.ts');
+                
+                let body = {};
+                if (req.method === 'POST') {
+                  body = await new Promise((resolve) => {
+                    let chunkStr = '';
+                    req.on('data', chunk => chunkStr += chunk);
+                    req.on('end', () => {
+                      try {
+                        resolve(chunkStr ? JSON.parse(chunkStr) : {});
+                      } catch {
+                        resolve({});
+                      }
+                    });
+                  });
+                }
+                
+                const customReq = {
+                  method: req.method,
+                  body,
+                  url: req.url,
+                  headers: req.headers
+                };
+                
+                const customRes = {
+                  status: (code: number) => {
+                    res.statusCode = code;
+                    return customRes;
+                  },
+                  json: (data: any) => {
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify(data));
+                    return customRes;
+                  },
+                  setHeader: (name: string, value: string) => {
+                    res.setHeader(name, value);
+                    return customRes;
+                  },
+                  end: () => res.end()
+                };
+                
+                await handler(customReq, customRes);
+              } catch (err: any) {
+                console.error('[Vite API Middleware Error]:', err);
+                res.statusCode = 500;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: err.message || 'Internal Dev server error' }));
+              }
+            } else {
+              next();
+            }
+          });
+        }
+      }
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

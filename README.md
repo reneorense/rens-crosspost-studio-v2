@@ -94,3 +94,13 @@ vercel deploy --prod
 ```
 The build configuration `npm run build` will build the static assets into `dist/` and expose the API routes under `/api/*` automatically.
 
+---
+
+## Phase 2B Notes for OAuth & Automation
+In **Phase 2B**, the application will move from local draft-saving and manual setups to automated cross-publishing and authentications:
+1. **Official OAuth Flows**: Live redirects will be added across all 8+ integrated social networks to retrieve real access and refresh tokens.
+2. **Database Integration**: Fetched secure tokens will be encrypted and saved in the `oauth_tokens` PostgreSQL table referencing their respective unique `connected_accounts`.
+3. **Automated Cron Worker**: The cron entrypoint `api/cron/publish-scheduled` will query the database every 5 minutes and publish scheduled records automatically using the corresponding platform APIS.
+4. **Action Logs Logging**: Rich telemetry on posting success and failure messages will be pushed to the `post_logs` database collection for on-dashboard console streaming.
+
+
